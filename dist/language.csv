@@ -1,0 +1,99 @@
+key,zh,en
+app_title,The Bazaar Gate,The Bazaar Gate
+title_with_emoji,🎮 The Bazaar Gate,🎮 The Bazaar Gate
+game_folder_label,📁 游戏目录,📁 Game Directory
+browse_button,浏览,Browse
+launcher_folder_label,🚀 启动器目录,🚀 Launcher Directory
+start_game_button,🎯 启动游戏,🎯 Start Game
+status_ready,✅ 就绪,✅ Ready
+log_frame_title,📋 运行日志,📋 Operation Log
+program_started,程序已启动，请设置路径后点击启动按钮,Program started please set paths and click the start button
+detected_default_game_path,检测到默认游戏路径: {},Detected default game path: {}
+no_game_exe_error,所选目录中没有找到 TheBazaar.exe！,TheBazaar.exe not found in selected directory!
+game_exe_not_found_error,错误: 所选目录中没有找到游戏执行文件,Error Game executable not found in selected directory
+no_launcher_error,所选目录中没有找到 Tempo Launcher 启动器！,Tempo Launcher not found in selected directory!
+launcher_exe_not_found_error,错误: 所选目录中没有找到启动器执行文件,Error Launcher executable not found
+settings_loaded,已加载保存的设置,Settings loaded
+load_settings_failed,加载设置失败: {},Failed to load settings: {}
+save_settings_failed,保存设置失败: {},Failed to save settings: {}
+detected_mod,  检测到: {},  Detected: {}
+found_mod_files,发现 {} 个模组文件/文件夹，开始备份...,Found {} mod files/folders starting backup...
+backup_success,已备份: {},Backed up: {}
+backup_failed,备份失败 {}: {},Backup failed {}: {}
+delete_failed,删除失败 {}: {},Delete failed {}: {}
+no_backup_folder,没有找到备份文件夹,No backup folder found
+restoring_mods,正在恢复模组文件...,Restoring mod files...
+restored_success,已恢复: {},Restored: {}
+restore_failed,恢复失败 {}: {},Restore failed {}: {}
+backup_folder_cleaned,已清理备份文件夹,Backup folder cleaned
+close_process_failed,关闭进程失败: {},Failed to close process: {}
+waiting_launcher_window,等待启动器窗口出现...,Waiting for launcher window...
+no_launcher_window_detected,未检测到启动器窗口，继续等待游戏启动...,Launcher window not detected waiting for game start...
+timeout_no_game,超时：{}秒内未检测到游戏启动（您是否点击了PLAY按钮？）,Timeout Game did not start within {} seconds Did you click the PLAY button?
+game_detected,✓ 检测到游戏已启动 (PID: {}),✓ Game detected (PID: {})
+capture_params_success,成功捕获启动参数,Captured launch parameters successfully
+cannot_get_cmdline,无法获取命令行参数,Cannot get command line parameters
+capture_params_failed,捕获参数失败: {},Failed to capture parameters: {}
+game_exe_not_exists,游戏执行文件不存在: {},Game executable does not exist: {}
+launching_game_with_params,使用捕获的参数启动游戏...,Launching game with captured parameters...
+launch_game_failed,启动游戏失败: {},Failed to launch game: {}
+game_started_success,游戏已成功启动！,Game started successfully!
+please_set_game_path,请先设置游戏目录！,Please set the game directory first!
+please_set_launcher_path,请先设置启动器目录！,Please set the launcher directory first!
+game_exe_missing,游戏中没有找到 TheBazaar.exe 路径: {},TheBazaar.exe not found in game Path: {}
+please_set_launcher_dir,请设置启动器目录！,Please set the launcher directory!
+launcher_not_found_in_dir,启动器目录中没有找到 Tempo Launcher 启动器！ 目录: {},Tempo Launcher not found in launcher directory Directory: {}
+start_auto_process,开始自动启动流程,Start auto launch process
+step1_check_mods,【步骤1】检查并处理模组文件,【Step 1】Check and process mod files
+detected_mod_count,检测到 {} 个模组文件/文件夹,Detected {} mod files/folders
+mods_backup_deleted,模组文件已备份并删除,Mod files backed up and deleted
+delete_mods_failed,删除模组文件失败,Failed to delete mod files
+backup_mods_failed,备份模组文件失败,Failed to backup mod files
+no_mods_detected_skip,未检测到模组文件，跳过步骤1,No mod files detected skipping step 1
+step1_failed,步骤1失败: {},Step 1 failed: {}
+step2_launch_launcher,【步骤2】启动启动器并获取参数,【Step 2】Launch launcher and get parameters
+launcher_dir,启动器目录: {},Launcher directory: {}
+launcher_exe,启动器程序: {},Launcher executable: {}
+starting_launcher,正在启动启动器...,Starting launcher...
+launcher_started,启动器已启动 (PID: {}),Launcher started (PID: {})
+reminder_click_play,请在Tempo启动后自行点击PLAY启动游戏,Please click PLAY in Tempo launcher to start the game
+got_params_success,成功获取启动参数,Successfully obtained launch parameters
+closing_game_process,正在关闭游戏进程...,Closing game process...
+game_process_closed,✓ 已关闭游戏进程,✓ Game process closed
+no_running_game_process,未找到运行中的游戏进程,No running game process found
+step2_complete,✓ 步骤2完成,✓ Step 2 complete
+step2_failed,步骤2失败: {},Step 2 failed: {}
+step3_restore_mods,【步骤3】恢复模组文件,【Step 3】Restore mod files
+mods_restored_success,模组文件已恢复,Mod files restored
+restore_mods_failed,恢复模组文件失败,Failed to restore mod files
+no_need_restore_mods,无需恢复模组文件,No need to restore mod files
+step3_failed,步骤3失败: {},Step 3 failed: {}
+step4_launch_game,【步骤4】使用参数启动游戏,【Step 4】Launch game with parameters
+all_steps_complete,✅ 所有步骤完成！游戏已成功启动！,✅ All steps complete Game started successfully!
+program_will_exit,程序即将退出...,Program will exit...
+process_execute_failed,❌ 流程执行失败: {},❌ Process execution failed: {}
+trying_cleanup,尝试清理并恢复状态...,Trying to cleanup and restore state...
+process_error,执行失败: {},Execution failed: {}
+select_game_dir,选择游戏目录,Select game directory
+select_launcher_dir,选择启动器目录,Select launcher directory
+language_setting_label,🌐 语言,🌐 Language
+error_title,错误,Error
+game_path_set,游戏路径已设置: {},Game path set: {}
+launcher_path_set,启动器目录已设置: {},Launcher directory set: {}
+auto_detected,自动检测到: {},Auto detected: {}
+game_path_changed,游戏目录:,Game Directory:
+launcher_path_changed,启动器目录:,Launcher Directory:
+separator_line,=================================================,=================================================
+step_separator,━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━,━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+game_path_empty_hint,游戏目录为空,Game directory is empty
+launcher_path_empty_hint,启动器目录为空,Launcher directory is empty
+no_mod_files_skip_step1,未检测到模组文件,No mod files detected
+open_settings,⚙️ 捕获文件,⚙️ Capture Files
+settings_title,📦 模组文件配置,📦 Mod Files Config
+mod_files_hint,📝 模组文件列表（点击编辑）:,📝 Mod Files List (click to edit):
+mod_files_help,每行填写一个文件或文件夹名称，不存在的文件会跳过，支持后缀识别文件类型，用于自动备份、删除和恢复模组,Enter one file/folder name per line non-existent items will be skipped supports file type detection by extension for mod backup/restore
+save_settings_btn,💾 保存配置,💾 Save Settings
+back_btn,⬅️ 返回,⬅️ Back
+settings_saved,配置已保存,Settings saved
+invalid_filename,文件名不合法: {},Invalid filename: {}
+add_mod_item_hint,输入新文件名后按回车添加,Enter new filename and press Enter to add

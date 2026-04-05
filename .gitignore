@@ -1,0 +1,52 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/*.exe
+*.egg-info/
+.eggs/
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+.trae/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+mod_backup/
+settings.txt
+launcher.log
+*.log
+
+# Build artifacts (exclude only exe, keep source files)
+dist/*.exe
+dist/TheBazaarGate.exe
+build/
+
+# Credentials
+*.json
+!package.json

@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-py310-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py310-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install psutil pywin32 pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --clean TheBazaarGate.spec
+        working-directory: ./
+
+      - name: Verify build output
+        run: |
+          if (Test-Path "dist/TheBazaarGate.exe") {
+            Write-Host "Build successful: dist/TheBazaarGate.exe"
+            Get-Item "dist/TheBazaarGate.exe" | Select-Object Name, Length
+          } else {
+            Write-Host "ERROR: Build output not found"
+            exit 1
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheBazaarGate-${{ runner.os }}
+          path: dist/TheBazaarGate.exe
+          retention-days: 30
+
+  lint:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff linter
+        run: ruff check dist/launcher_tool.py
+        continue-on-error: true
+
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Validate CSV
+        run: |
+          python -c "
+          import csv
+          with open('dist/language.csv', 'r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            print(f'CSV has {len(rows)} translation keys')
+            headers = reader.fieldnames
+            print(f'Languages: {headers[1:]}')
+            print('CSV validation passed!')
+          "
+
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile dist/launcher_tool.py && echo "Python syntax OK"
