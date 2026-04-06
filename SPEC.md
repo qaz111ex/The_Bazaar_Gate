@@ -23,9 +23,10 @@
 
 1. **Multi-Language Support**
    - CSV-based translation system
+   - Language file embedded in executable
    - Runtime language switching
    - Auto-detect system language
-   - Extensible: add new languages by adding columns to CSV
+   - Extensible: add new languages by modifying source and rebuilding
 
 2. **Path Management**
    - Game directory selection with validation
@@ -51,12 +52,17 @@
    - Color-coded status messages
    - Responsive layout
 
+6. **Single-File Distribution**
+   - All resources embedded in executable
+   - No external configuration files needed
+   - Portable - just run and go
+
 ## UI/UX Specification
 
 ### Window Configuration
 
 - **Default Size**: 500 x 600 pixels
-- **Minimum Size**: 400 x 500 pixels
+- **Minimum Size**: 450 x 500 pixels
 - **Resizable**: Yes
 - **Title**: "The Bazaar Gate" (localized)
 
@@ -130,7 +136,7 @@
 
 ### Settings Storage
 
-**File**: `settings.txt` (JSON format)
+**File**: `settings.txt` (JSON format, created at runtime)
 
 ```json
 {
@@ -143,7 +149,7 @@
 
 ### Language File Format
 
-**File**: `language.csv`
+**File**: `dist/language.csv` (embedded in executable at build time)
 
 ```csv
 key,zh,en
@@ -213,19 +219,26 @@ title_with_emoji,🎮 The Bazaar Gate,🎮 The Bazaar Gate
 
 ## Build Configuration
 
-### PyInstaller Spec
+### PyInstaller Settings
 
 - **Output Name**: TheBazaarGate.exe
 - **Mode**: Onefile, windowed (no console)
-- **Data Files**: language.csv
-- **Hidden Imports**: psutil, win32gui, win32con, pywintypes
+- **Data Files**: language.csv (embedded)
+- **Hidden Imports**: psutil, win32gui, win32con, pywintypes, shlex
 
 ### File Structure
 
 ```
-dist/
-├── TheBazaarGate.exe    # Built executable (self-contained)
-└── language.csv         # Translation file (external)
+Source:
+The_Bazaar_Gate/
+├── dist/
+│   ├── launcher_tool.py        # Main application source
+│   └── language.csv            # Language file (embedded when built)
+├── build_exe.py                # Build script
+└── requirements.txt            # Python dependencies
+
+Build Output:
+dist/TheBazaarGate.exe          # Self-contained executable
 ```
 
 ## Internationalization
@@ -236,13 +249,18 @@ dist/
 |------|----------|--------|
 | zh | Chinese (Simplified) | Default |
 | en | English | Full |
+| zh_Hant | Chinese (Traditional) | Full |
+| ru | Russian | Full |
+| ko | Korean | Full |
+| ja | Japanese | Full |
 
 ### Adding New Languages
 
-1. Add new column to `language.csv` with language code
-2. Translate all values
-3. Rebuild executable (optional, CSV can be external)
-4. Language will appear in dropdown automatically
+1. Edit `dist/language.csv` in source code
+2. Add new column with language code
+3. Translate all values
+4. Rebuild executable with `python build_exe.py`
+5. New language will appear in dropdown automatically
 
 ### Translation Keys
 

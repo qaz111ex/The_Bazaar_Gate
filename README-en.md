@@ -2,7 +2,7 @@
 
 🎮 A patch tool specifically designed to bypass Tempo Launcher's official file integrity verification.
 
-[中文](README_cn.md)
+[中文](README.md)
 
 ## What does this tool do?
 
@@ -14,39 +14,54 @@ Tempo Launcher verifies game file integrity before launching the game. When mods
 
 - **Automatic Mod Management**: Automatically backup, delete, and restore mod files
 - **Parameter Capture**: Capture game launch parameters from Tempo Launcher
-- **Multi-Language Support**: Built-in Chinese (zh) and English (en), easily extensible
+- **Multi-Language Support**: Built-in Chinese, English, Traditional Chinese, Russian, Korean, Japanese - easily extensible
 - **Modern UI**: Clean, flat design
+- **Single-File Distribution**: Language files are embedded in the executable, no additional configuration files needed
 
 ## Downloads
 
-Get the latest release from the [Releases](https://github.com/YOUR_USERNAME/TheBazaarGate/releases) page.
+Get the latest release from the [Releases](https://github.com/qaz111ex/The_Bazaar_Gate/releases) page.
 
 ## Usage
 
-1. Extract `TheBazaarGate.zip`
-2. Run `TheBazaarGate.exe`
-3. Set your game directory and launcher directory
-4. Click "Start Game" - the tool will handle everything automatically
+1. Run `TheBazaarGate.exe`
+2. Set your game directory and launcher directory
+3. Click "Start Game" - the tool will handle everything automatically
 
 ## Adding New Languages
 
-The application supports unlimited language columns in `language.csv`.
+Language files are embedded in the executable. To add a new language, follow these steps:
 
-### Step 1: Edit language.csv
+### Step 1: Edit the Language File
 
-Open `language.csv` in any text editor and add a new column with your language code as the header.
+Edit `dist/language.csv` in the source code and add a new column with your language code as the header.
 
-**Example - Adding Japanese (ja):**
+**Example - Adding French (fr):**
 
 ```csv
-key,zh,en,ja
-app_title,The Bazaar Gate,The Bazaar Gate,ザ・バザール・ゲート
+key,zh,en,fr
+app_title,The Bazaar Gate,The Bazaar Gate,La Porte du Bazar
 ...
 ```
 
-### Step 2: Translate all keys
+### Step 2: Translate All Keys
 
-Copy an existing language column and translate all values. The application will automatically detect the new language column and add it to the dropdown.
+Copy an existing language column and translate all values. Ensure:
+- Keep emoji indicators (📁, 🚀, 🎮, etc.) for visual consistency
+- Maintain placeholder positions (`{}`) for format strings
+- Every row has a translation for the new language
+
+### Step 3: Rebuild the Executable
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Build executable (language file will be embedded automatically)
+python build_exe.py
+```
+
+After building, the new language will appear in the program's language dropdown.
 
 ### Translation Guidelines
 
@@ -100,7 +115,7 @@ Settings are stored in `settings.txt` in the same directory as the executable:
 
 ### Mod Files Configuration
 
-The `mod_items` list defines which files/folders to backup before launching:
+Click the "Capture Files" button in the program to configure the mod files list:
 - Each line = one file or folder name
 - Non-existent files are automatically skipped
 - Supports both files (`.dll`) and folders
@@ -127,7 +142,7 @@ python dist/launcher_tool.py
 ### Build Executable
 
 ```bash
-pyinstaller --clean TheBazaarGate.spec
+python build_exe.py
 ```
 
 Output: `dist/TheBazaarGate.exe`
@@ -135,21 +150,29 @@ Output: `dist/TheBazaarGate.exe`
 ## Project Structure
 
 ```
-TheBazaarGate/
+The_Bazaar_Gate/
 ├── dist/
-│   ├── launcher_tool.py      # Main application
-│   ├── language.csv          # Translation file
-│   └── TheBazaarGate.exe    # Built executable
+│   ├── launcher_tool.py        # Main application source
+│   └── language.csv            # Language file (embedded when built)
 ├── .github/
 │   ├── workflows/
-│   │   └── ci.yml            # CI/CD pipeline
+│   │   └── ci.yml              # CI/CD pipeline
 │   └── ISSUE_TEMPLATE/
-│       ├── bug_report.md     # Bug report template
-│       └── feature_request.md # Feature request template
-├── SPEC.md                   # Project specification
-├── README_cn.md              # Chinese version
-├── README_en.md              # This file (English)
-└── CONTRIBUTING.md          # Contribution guidelines
+│       ├── bug_report.md       # Bug report template
+│       └── feature_request.md  # Feature request template
+├── build_exe.py                # Build script
+├── requirements.txt            # Python dependencies
+├── SPEC.md                     # Project specification
+├── README.md                   # Chinese version
+├── README-en.md                # This file (English)
+└── CONTRIBUTING.md             # Contribution guidelines
+```
+
+### Release Files
+
+Only a single executable file is needed for release:
+```
+TheBazaarGate.exe    # Self-contained executable with all resources
 ```
 
 ## License

@@ -33,12 +33,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install psutil pywin32 pyinstaller
+          pip install -r requirements.txt
 
       - name: Build executable
         run: |
-          pyinstaller --clean TheBazaarGate.spec
-        working-directory: ./
+          python build_exe.py
 
       - name: Verify build output
         run: |

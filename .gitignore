@@ -6,8 +6,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-dist/*.exe
 *.egg-info/
 .eggs/
 *.egg
@@ -15,6 +13,8 @@ dist/*.exe
 # PyInstaller
 *.manifest
 *.spec
+build/
+dist/*.exe
 
 # Virtual environments
 venv/
@@ -28,7 +28,7 @@ env/
 *.swo
 *~
 
-# Claude Code
+# Claude Code / Trae
 .claude/
 .trae/
 
@@ -41,11 +41,6 @@ mod_backup/
 settings.txt
 launcher.log
 *.log
-
-# Build artifacts (exclude only exe, keep source files)
-dist/*.exe
-dist/TheBazaarGate.exe
-build/
 
 # Credentials
 *.json

@@ -8,8 +8,8 @@ Thank you for your interest in contributing!
 
 ```bash
 # Fork the repository on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/TheBazaarGate.git
-cd TheBazaarGate
+git clone https://github.com/qaz111ex/The_Bazaar_Gate.git
+cd The_Bazaar_Gate
 ```
 
 ### 2. Create a Feature Branch
@@ -25,7 +25,7 @@ git checkout -b fix/your-bug-fix
 ### 3. Make Your Changes
 
 - Write clean, readable code following PEP 8
-- Add/update translations in `language.csv` if needed
+- Add/update translations in `dist/language.csv` if needed
 - Test your changes thoroughly
 - Keep commits small and focused
 
@@ -150,7 +150,7 @@ Open issues with:
 ### Install Dependencies
 
 ```bash
-pip install psutil pywin32
+pip install -r requirements.txt
 ```
 
 ### Run from Source
@@ -162,8 +162,12 @@ python dist/launcher_tool.py
 ### Build Executable
 
 ```bash
-pyinstaller --clean TheBazaarGate.spec
+python build_exe.py
 ```
+
+Output: `dist/TheBazaarGate.exe`
+
+**Note**: The language file (`dist/language.csv`) is embedded in the executable during build. Users only need the single `.exe` file.
 
 ## Style Guide
 
@@ -177,7 +181,7 @@ pyinstaller --clean TheBazaarGate.spec
 
 ### UI Text
 
-- All user-facing text must be in `language.csv`
+- All user-facing text must be in `dist/language.csv`
 - Use translation keys, never hardcode strings
 - Include emoji indicators for visual consistency
 - Maintain placeholder positions (`{}`) for format strings
@@ -187,6 +191,22 @@ pyinstaller --clean TheBazaarGate.spec
 - Use conventional commit format
 - Keep messages concise (under 72 chars)
 - Reference issues where applicable (#123)
+
+## Adding New Languages
+
+1. Edit `dist/language.csv` in the source code
+2. Add a new column with the language code (e.g., `fr` for French)
+3. Translate all values in the new column
+4. Test by running from source: `python dist/launcher_tool.py`
+5. Rebuild the executable: `python build_exe.py`
+6. The new language will appear in the program's dropdown
+
+### Translation Guidelines
+
+- Keep emoji indicators (📁, 🚀, 🎮, etc.) for visual consistency
+- Maintain placeholder positions (`{}`) for format strings
+- Ensure every row has a translation for the new language
+- Test the translation in the application before submitting
 
 ## Questions?
 
