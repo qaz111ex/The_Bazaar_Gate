@@ -1217,7 +1217,7 @@ class BazaarGate:
             self.logger.warning(f"Failed to clean backup folder: {e}")
         return True
 
-    def _find_process_by_name(self, process_name: str) -> Optional[psutil.Process]:
+    def _find_process_by_name(self, process_name: str) -> Optional["psutil.Process"]:
         """
         根据进程名查找进程。
 
@@ -1236,7 +1236,7 @@ class BazaarGate:
                 continue
         return None
 
-    def _close_process_gracefully(self, proc: psutil.Process) -> bool:
+    def _close_process_gracefully(self, proc: "psutil.Process") -> bool:
         """
         优雅地关闭进程。
 

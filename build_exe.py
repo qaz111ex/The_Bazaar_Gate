@@ -34,7 +34,7 @@ def check_required_files() -> bool:
             missing_files.append(file_path)
 
     if missing_files:
-        print(f"错误: 缺少必需文件: {', '.join(missing_files)}")
+        print(f"Missing required files: {', '.join(missing_files)}")
         return False
     return True
 
@@ -62,7 +62,7 @@ def build() -> int:
     if not check_required_files():
         return 1
 
-    print("开始打包 The Bazaar Gate...")
+    print("Building The Bazaar Gate...")
 
     launcher_script_path = get_dist_file_path("launcher_tool.py")
     language_csv_path = get_dist_file_path("language.csv")
@@ -81,30 +81,30 @@ def build() -> int:
             ]
         )
 
-        print("\n打包完成！")
-        print(f"可执行文件位于: {os.path.join('dist', f'{OUTPUT_NAME}.exe')}")
+        print("\nBuild completed!")
+        print(f"Executable created at: {os.path.join('dist', f'{OUTPUT_NAME}.exe')}")
         return 0
 
     except SystemExit as e:
-        print(f"\nPyInstaller 执行失败: {e}")
+        print(f"\nPyInstaller execution failed: {e}")
         return 1
     except OSError as e:
-        print(f"\n文件系统错误: {e}")
+        print(f"\nFilesystem error: {e}")
         return 1
     except RuntimeError as e:
-        print(f"\n打包失败: {e}")
+        print(f"\nBuild failed: {e}")
         return 1
     except ImportError as e:
-        print(f"\n依赖导入失败: {e}")
+        print(f"\nDependency import failed: {e}")
         return 1
     except ValueError as e:
-        print(f"\n打包参数错误: {e}")
+        print(f"\nInvalid build argument: {e}")
         return 1
     except TypeError as e:
-        print(f"\n打包参数类型错误: {e}")
+        print(f"\nInvalid build argument type: {e}")
         return 1
     except AttributeError as e:
-        print(f"\n打包工具异常: {e}")
+        print(f"\nBuild tool error: {e}")
         traceback.print_exc()
         return 1
 
