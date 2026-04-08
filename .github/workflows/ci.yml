@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [master, main, develop]
@@ -33,7 +36,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
 
       - name: Build executable
         run: |
@@ -88,23 +91,17 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+
       - name: Validate CSV
         run: |
-          python -c "
-          import csv
-          with open('dist/language.csv', 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            print(f'CSV has {len(rows)} translation keys')
-            headers = reader.fieldnames
-            print(f'Languages: {headers[1:]}')
-            print('CSV validation passed!')
-          "
+          python -c "import csv, pathlib; f = pathlib.Path('dist/language.csv').open('r', encoding='utf-8-sig'); reader = csv.DictReader(f); rows = list(reader); headers = reader.fieldnames; print(f'CSV has {len(rows)} translation keys'); print(f'Languages: {headers[1:]}'); print('CSV validation passed!'); f.close()"
 
       - name: Validate Python syntax
         run: |
-          python -m py_compile dist/launcher_tool.py build_exe.py
-          Write-Host "Python syntax OK"
+          python -c "import py_compile; py_compile.compile('dist/launcher_tool.py', doraise=True); py_compile.compile('build_exe.py', doraise=True); print('Python syntax OK')"
 
       - name: Run unit tests
         run: |
