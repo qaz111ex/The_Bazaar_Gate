@@ -1593,7 +1593,7 @@ def main() -> None:
     应用程序入口点。
     """
     root = tk.Tk()
-    app = BazaarGate(root)
+    BazaarGate(root)
     root.mainloop()
 
 
