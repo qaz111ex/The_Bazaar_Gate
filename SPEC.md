@@ -3,7 +3,7 @@
 ## Overview
 
 **Project Name**: The Bazaar Gate
-**Type**: Windows Desktop Application (Tempo Launcher Patch Tool)
+**Type**: Windows Desktop Application (The Bazaar launcher helper)
 **Core Functionality**: Bypasses Tempo Launcher's file integrity verification by automating mod backup/deletion/capture/restore workflow
 **Target Users**: Gamers who want to use mods with games that require Tempo Launcher
 
@@ -136,7 +136,7 @@
 
 ### Settings Storage
 
-**File**: `settings.txt` (JSON format, created at runtime)
+**File**: `settings.txt` (JSON format, created in the program directory at runtime)
 
 ```json
 {

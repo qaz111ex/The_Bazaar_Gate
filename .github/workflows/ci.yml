@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, main, develop]
   pull_request:
-    branches: [main]
+    branches: [master, main]
 
 permissions:
   contents: read
@@ -73,8 +73,7 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff linter
-        run: ruff check dist/launcher_tool.py
-        continue-on-error: true
+        run: ruff check dist/launcher_tool.py build_exe.py tests
 
   test:
     runs-on: windows-latest
@@ -104,4 +103,8 @@ jobs:
 
       - name: Validate Python syntax
         run: |
-          python -m py_compile dist/launcher_tool.py && echo "Python syntax OK"
+          python -m py_compile dist/launcher_tool.py build_exe.py && echo "Python syntax OK"
+
+      - name: Run unit tests
+        run: |
+          python -m unittest discover -s tests -p "test_*.py" -v

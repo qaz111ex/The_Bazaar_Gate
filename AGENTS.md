@@ -5,7 +5,7 @@
 ## 项目概述
 
 **项目名称**: The Bazaar Gate  
-**类型**: Windows 桌面应用程序（Tempo Launcher 补丁工具）  
+**类型**: Windows 桌面应用程序（The Bazaar 启动辅助工具）  
 **主要语言**: Python 3.9+  
 **GUI 框架**: Tkinter (ttk widgets)  
 **目标平台**: Windows only
@@ -33,6 +33,7 @@ The_Bazaar_Gate/
 │   ├── ISSUE_TEMPLATE/         # Issue 模板
 │   └── CODEOWNERS              # 代码所有者
 ├── build_exe.py                # PyInstaller 打包脚本
+├── TheBazaarGate.spec          # PyInstaller spec 文件
 ├── requirements.txt            # Python 依赖
 ├── SPEC.md                     # 项目规格说明
 ├── README.md                   # 中文文档
@@ -40,6 +41,9 @@ The_Bazaar_Gate/
 ├── CONTRIBUTING.md             # 贡献指南
 ├── LICENSE                     # MIT 许可证
 ├── .gitignore                  # Git 排除配置
+├── tests/
+│   ├── __init__.py             # 测试包标记
+│   └── test_launcher_tool.py   # 单元测试
 └── AGENTS.md                   # 本文件
 ```
 
@@ -62,19 +66,21 @@ BazaarGate (main class)
 ├── 模组备份/恢复
 ├── 启动器参数捕获
 ├── 游戏启动流程
-└── 设置持久化
+├── 设置持久化
+└── Windows 依赖懒加载
 ```
 
 ### 关键方法
 
 | 方法 | 功能 |
 |------|------|
-| `_backup_mods()` | 备份模组文件到 mod_backup/ |
+| `_backup_mods()` | 备份模组文件到程序目录下的 mod_backup/ |
 | `_delete_mods()` | 删除游戏目录中的模组文件 |
 | `_restore_mods()` | 从备份恢复模组文件 |
-| `_wait_for_manual_click_and_capture()` | 捕获 Tempo Launcher 启动参数 |
-| `_launch_game_with_params()` | 使用参数启动游戏 |
+| `_wait_for_manual_click_and_capture()` | 捕获 Tempo Launcher 启动参数列表 |
+| `_launch_game_with_params()` | 使用参数列表启动游戏 |
 | `_safe_launch_exe()` | 安全启动可执行文件（含路径验证） |
+| `_ensure_windows_runtime_modules()` | 按需加载 psutil / win32gui |
 
 ## 编码规范
 
@@ -167,6 +173,11 @@ def _get_language_path(self) -> str:
     return os.path.join(os.path.dirname(__file__), 'language.csv')
 ```
 
+运行时文件说明：
+
+- `settings.txt`、`launcher.log`、`mod_backup/` 均保存在程序目录
+- 单文件 exe 仍会受 PyInstaller 自解包影响，启动速度慢于文件夹分发属于正常现象
+
 ## 安全考虑
 
 ### 路径验证
@@ -190,6 +201,7 @@ def _validate_executable_path(self, exe_path: str) -> bool:
 - 单例模式使用双重检查锁定
 - UI 更新使用 `root.after()` 调度到主线程
 - 共享状态使用锁保护
+- 后台线程不直接调用 `root.update()` 或 `sys.exit()`
 
 ## 常见任务
 
@@ -210,7 +222,7 @@ def _validate_executable_path(self, exe_path: str) -> bool:
 
 1. 在 `AppConfig` dataclass 中添加常量
 2. 在 `settings.txt` JSON 结构中添加字段
-3. 更新 `_load_settings()` 和 `_save_settings()`
+3. 更新 `_read_settings_data()`、`_write_settings_data()`、`_load_settings()` 和 `_save_settings()`
 
 ## 测试清单
 
@@ -220,12 +232,15 @@ def _validate_executable_path(self, exe_path: str) -> bool:
 - [ ] 游戏启动正常
 - [ ] 打包后的 exe 可独立运行
 - [ ] 错误处理和用户提示正确
+- [ ] 启动器目录中存在多个 Tempo 相关 exe 时，能优先选择主启动器
+- [ ] 遇到 Windows 错误 740 时，日志提示明确
 
 ## 已知限制
 
 - 仅支持 Windows 平台（依赖 win32gui, psutil）
 - 需要 Tempo Launcher 已安装
 - 游戏目录需要包含 TheBazaar.exe
+- 单文件 exe 启动速度会受到 PyInstaller 自解包影响
 
 ## 相关文档
 

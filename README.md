@@ -102,7 +102,7 @@ python build_exe.py
 
 ## 配置
 
-设置存储在可执行文件同一目录下的 `settings.txt` 中：
+设置存储在程序所在目录下的 `settings.txt` 中。程序运行时还会在同一目录生成 `launcher.log` 和临时的 `mod_backup/`：
 
 ```json
 {

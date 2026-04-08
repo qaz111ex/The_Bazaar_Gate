@@ -102,7 +102,7 @@ After building, the new language will appear in the program's language dropdown.
 
 ## Configuration
 
-Settings are stored in `settings.txt` in the same directory as the executable:
+Settings are stored in `settings.txt` in the program directory. The app also creates `launcher.log` and a temporary `mod_backup/` folder in the same location while running:
 
 ```json
 {
