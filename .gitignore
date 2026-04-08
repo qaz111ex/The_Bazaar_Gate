@@ -12,9 +12,9 @@ __pycache__/
 
 # PyInstaller
 *.manifest
-*.spec
 build/
 dist/*.exe
+!TheBazaarGate.spec
 
 # Virtual environments
 venv/
@@ -41,7 +41,12 @@ mod_backup/
 settings.txt
 launcher.log
 *.log
+.ruff_cache/
+dist/__pycache__/
+tests/__pycache__/
 
-# Credentials
-*.json
-!package.json
+# Credentials / local secrets
+.env
+.env.*
+credentials.json
+secrets.json
