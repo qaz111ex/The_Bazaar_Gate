@@ -4,7 +4,7 @@ The Bazaar Gate 打包脚本
 使用 PyInstaller 将启动器打包为独立的可执行文件。
 
 Author: The Bazaar Gate Team
-Version: 1.2.0
+Version: 1.3.0
 """
 
 import PyInstaller.__main__
