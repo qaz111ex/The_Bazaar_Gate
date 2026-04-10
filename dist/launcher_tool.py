@@ -5,7 +5,7 @@ The Bazaar Gate - The Bazaar 启动辅助工具
 主要功能包括：模组备份/恢复、启动器参数捕获、游戏启动等。
 
 Author: The Bazaar Gate Team
-Version: 1.2.0
+Version: 1.3.0
 """
 
 import tkinter as tk
@@ -20,6 +20,7 @@ import sys
 import csv
 import locale
 import logging
+import tempfile
 from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass
 
@@ -44,8 +45,12 @@ class AppConfig:
     LOG_TEXT_HEIGHT: int = 10
     MOD_FILES_TEXT_HEIGHT: int = 10
     LAUNCHER_WINDOW_TIMEOUT: int = 30
+    LAUNCHER_WINDOW_POLL_INTERVAL: float = 1.0
     GAME_START_TIMEOUT: int = 120
+    GAME_PROCESS_POLL_INTERVAL: float = 0.5
     PROCESS_CLOSE_TIMEOUT: int = 5
+    POST_GAME_CLOSE_DELAY: float = 1.0
+    PRE_EXIT_DELAY: float = 0.5
     WINDOW_WIDTH: int = 500
     WINDOW_HEIGHT: int = 600
     WINDOW_MIN_WIDTH: int = 450
@@ -330,10 +335,14 @@ class BazaarGate:
         """
         self.logger = logging.getLogger("BazaarGate")
         self.logger.setLevel(logging.INFO)
-        self.logger.handlers.clear()
+        self.logger.propagate = False
+        for handler in list(self.logger.handlers):
+            self.logger.removeHandler(handler)
+            try:
+                handler.close()
+            except (OSError, ValueError):
+                pass
         try:
-            if os.path.exists(self.log_file):
-                os.remove(self.log_file)
             handler = logging.FileHandler(self.log_file, encoding="utf-8", mode="w")
             formatter = logging.Formatter(
                 "%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S"
@@ -377,8 +386,25 @@ class BazaarGate:
         Args:
             settings: 要保存的设置字典
         """
-        with open(self.settings_file, "w", encoding="utf-8") as f:
-            json.dump(settings, f, indent=2, ensure_ascii=False)
+        settings_dir = os.path.dirname(self.settings_file) or "."
+        os.makedirs(settings_dir, exist_ok=True)
+        temp_file_path = ""
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=settings_dir,
+                delete=False,
+                suffix=".tmp",
+            ) as handle:
+                json.dump(settings, handle, indent=2, ensure_ascii=False)
+                handle.flush()
+                temp_file_path = handle.name
+            os.replace(temp_file_path, self.settings_file)
+        except (IOError, OSError, ValueError):
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            raise
 
     def _setup_styles(self) -> None:
         """
@@ -1034,7 +1060,15 @@ class BazaarGate:
         preferred_keywords = ("launcher",)
         excluded_keywords = ("updater", "install", "crash", "helper", "service")
 
-        for item in os.listdir(launcher_dir):
+        try:
+            launcher_items = os.listdir(launcher_dir)
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            self.logger.warning(
+                f"Failed to list launcher directory '{launcher_dir}': {e}"
+            )
+            return None
+
+        for item in launcher_items:
             lower_item = item.lower()
             if AppConfig.LAUNCHER_PROCESS_NAME.lower() not in lower_item:
                 continue
@@ -1112,7 +1146,7 @@ class BazaarGate:
                 self.log_t("detected_mod", item, level="INFO")
         return mod_files
 
-    def _copy_item(self, src: str, dst: str) -> bool:
+    def _copy_item(self, src: str, dst: str) -> Tuple[bool, Optional[str]]:
         """
         复制文件或目录。
 
@@ -1121,7 +1155,7 @@ class BazaarGate:
             dst: 目标路径
 
         Returns:
-            复制成功返回True，失败返回False
+            返回复制是否成功，以及失败时的错误详情
         """
         try:
             if os.path.isdir(src):
@@ -1130,22 +1164,26 @@ class BazaarGate:
                 shutil.copytree(src, dst)
             else:
                 shutil.copy2(src, dst)
-            return True
+            return True, None
         except (IOError, OSError, shutil.Error) as e:
             self.logger.error(f"Failed to copy {src} to {dst}: {e}")
-            return False
+            return False, str(e)
 
-    def _backup_mods(self, game_dir: str) -> bool:
+    def _backup_mods(
+        self, game_dir: str, mod_files: Optional[List[str]] = None
+    ) -> bool:
         """
         备份游戏目录中的模组文件。
 
         Args:
             game_dir: 游戏目录路径
+            mod_files: 预先检测到的模组文件列表
 
         Returns:
             备份成功返回True，失败返回False
         """
-        mod_files = self._get_mod_files(game_dir)
+        if mod_files is None:
+            mod_files = self._get_mod_files(game_dir)
         if not mod_files:
             return False
 
@@ -1157,24 +1195,34 @@ class BazaarGate:
         for item in mod_files:
             src = os.path.join(game_dir, item)
             dst = os.path.join(self.backup_folder, item)
-            if self._copy_item(src, dst):
+            copied, error_detail = self._copy_item(src, dst)
+            if copied:
                 self.log_t("backup_success", item, level="SUCCESS")
             else:
-                self.log_t("backup_failed", item, "copy failed", level="ERROR")
+                self.log_t(
+                    "backup_failed",
+                    item,
+                    error_detail or self.lang.t("copy_failed_fallback"),
+                    level="ERROR",
+                )
                 return False
         return True
 
-    def _delete_mods(self, game_dir: str) -> bool:
+    def _delete_mods(
+        self, game_dir: str, mod_files: Optional[List[str]] = None
+    ) -> bool:
         """
         删除游戏目录中的模组文件。
 
         Args:
             game_dir: 游戏目录路径
+            mod_files: 预先检测到的模组文件列表
 
         Returns:
             删除成功返回True，失败返回False
         """
-        mod_files = self._get_mod_files(game_dir)
+        if mod_files is None:
+            mod_files = self._get_mod_files(game_dir)
         for item in mod_files:
             item_path = os.path.join(game_dir, item)
             try:
@@ -1205,10 +1253,16 @@ class BazaarGate:
         for item in os.listdir(self.backup_folder):
             src = os.path.join(self.backup_folder, item)
             dst = os.path.join(game_dir, item)
-            if self._copy_item(src, dst):
+            copied, error_detail = self._copy_item(src, dst)
+            if copied:
                 self.log_t("restored_success", item, level="SUCCESS")
             else:
-                self.log_t("restore_failed", item, level="ERROR")
+                self.log_t(
+                    "restore_failed",
+                    item,
+                    error_detail or self.lang.t("copy_failed_fallback"),
+                    level="ERROR",
+                )
                 return False
         try:
             shutil.rmtree(self.backup_folder)
@@ -1352,7 +1406,7 @@ class BazaarGate:
             hwnd = find_launcher_window()
             if hwnd:
                 break
-            time.sleep(1)
+            time.sleep(AppConfig.LAUNCHER_WINDOW_POLL_INTERVAL)
 
         if not hwnd:
             self.log_t("no_launcher_window_detected", level="WARNING")
@@ -1363,7 +1417,7 @@ class BazaarGate:
             game_proc = self._find_process_by_name(AppConfig.GAME_EXE_NAME)
             if game_proc:
                 break
-            time.sleep(0.3)
+            time.sleep(AppConfig.GAME_PROCESS_POLL_INTERVAL)
 
         if not game_proc:
             raise RuntimeError(
@@ -1424,68 +1478,105 @@ class BazaarGate:
         with self._ui_lock:
             self.root.after(0, lambda: self.launch_button.config(state=state))
 
-    def _start_launch_process(self) -> None:
+    def _set_game_path_on_ui_thread(self, game_dir: str) -> None:
         """
-        启动游戏启动流程的入口方法。
+        在线程安全的前提下更新游戏路径变量。
+
+        Args:
+            game_dir: 游戏目录路径
         """
-        if not self.game_path.get():
+        self.root.after(0, lambda: self.game_path.set(game_dir))
+
+    def _validate_launch_prerequisites(self) -> Optional[Tuple[str, str, str]]:
+        """
+        验证启动流程所需的前置条件。
+
+        Returns:
+            验证成功时返回游戏目录、启动器目录和启动器 exe 路径，否则返回 None
+        """
+        game_dir = self.game_path.get().strip()
+        launcher_dir = self.launcher_path.get().strip()
+
+        if not game_dir:
             messagebox.showerror(
                 self.lang.t("error_title"), self.lang.t("please_set_game_path")
             )
-            return
-        if not self.launcher_path.get():
+            return None
+        if not launcher_dir:
             messagebox.showerror(
                 self.lang.t("error_title"), self.lang.t("please_set_launcher_path")
             )
-            return
+            return None
         if not self._ensure_windows_runtime_modules():
             messagebox.showerror(
                 self.lang.t("error_title"), self.lang.t("launcher_launch_failed")
             )
-            return
-        game_exe = os.path.join(self.game_path.get(), AppConfig.GAME_EXE_NAME)
+            return None
+
+        game_exe = os.path.join(game_dir, AppConfig.GAME_EXE_NAME)
         if not os.path.exists(game_exe):
             messagebox.showerror(
                 self.lang.t("error_title"),
-                self.lang.t_format("game_exe_missing", self.game_path.get()),
+                self.lang.t_format("game_exe_missing", game_dir),
             )
-            return
-        launcher_dir = self.launcher_path.get()
-        if not launcher_dir or not os.path.exists(launcher_dir):
+            return None
+        if not os.path.exists(launcher_dir):
             messagebox.showerror(
                 self.lang.t("error_title"), self.lang.t("please_set_launcher_dir")
             )
-            return
-        if not self._find_launcher_exe(launcher_dir):
+            return None
+
+        launcher_exe = self._find_launcher_exe(launcher_dir)
+        if not launcher_exe:
             messagebox.showerror(
                 self.lang.t("error_title"),
                 self.lang.t_format("launcher_not_found_in_dir", launcher_dir),
             )
+            return None
+        return game_dir, launcher_dir, launcher_exe
+
+    def _start_launch_process(self) -> None:
+        """
+        启动游戏启动流程的入口方法。
+        """
+        launch_context = self._validate_launch_prerequisites()
+        if not launch_context:
             return
 
         self._set_button_state("disabled")
-        worker_thread = threading.Thread(target=self._run_launch_process, daemon=True)
+        worker_thread = threading.Thread(
+            target=self._run_launch_process,
+            args=launch_context,
+            daemon=True,
+        )
         worker_thread.start()
         self._worker_thread = worker_thread
 
-    def _run_launch_process(self) -> None:
+    def _run_launch_process(
+        self, game_dir: str, launcher_dir: str, launcher_exe: str
+    ) -> None:
         """
         执行完整的游戏启动流程（在工作线程中运行）。
+
+        Args:
+            game_dir: 游戏目录
+            launcher_dir: 启动器目录
+            launcher_exe: 启动器可执行文件路径
         """
         try:
             self.log_t("separator_line", level="SYSTEM")
             self.log_t("start_auto_process", level="SYSTEM")
             self.log_t("separator_line", level="SYSTEM")
             params: Optional[List[str]] = None
+            mod_files = self._get_mod_files(game_dir)
 
             step1_success = False
             try:
                 self.log_t("step1_check_mods", level="INFO")
-                mod_files = self._get_mod_files(self.game_path.get())
                 if mod_files:
                     self.log_t("detected_mod_count", len(mod_files), level="INFO")
-                    if self._backup_mods(self.game_path.get()):
-                        if self._delete_mods(self.game_path.get()):
+                    if self._backup_mods(game_dir, mod_files):
+                        if self._delete_mods(game_dir, mod_files):
                             self.log_t("mods_backup_deleted", level="SUCCESS")
                             step1_success = True
                         else:
@@ -1503,12 +1594,6 @@ class BazaarGate:
 
             try:
                 self.log_t("step2_launch_launcher", level="INFO")
-                launcher_dir = self.launcher_path.get()
-                launcher_exe = self._find_launcher_exe(launcher_dir)
-                if not launcher_exe:
-                    raise RuntimeError(
-                        self.lang.t_format("launcher_not_found_in_dir", launcher_dir)
-                    )
                 self.log_t("launcher_dir", launcher_dir, level="INFO")
                 self.log_t("launcher_exe", os.path.basename(launcher_exe), level="INFO")
                 self.log_t("starting_launcher", level="INFO")
@@ -1530,7 +1615,7 @@ class BazaarGate:
                     self.log_t("game_process_closed", level="SUCCESS")
                 else:
                     self.log_t("no_running_game_process", level="WARNING")
-                time.sleep(2)
+                time.sleep(AppConfig.POST_GAME_CLOSE_DELAY)
                 self.log_t("step2_complete", level="SUCCESS")
             except RuntimeError:
                 raise
@@ -1541,7 +1626,7 @@ class BazaarGate:
             try:
                 self.log_t("step3_restore_mods", level="INFO")
                 if step1_success and os.path.exists(self.backup_folder):
-                    if self._restore_mods(self.game_path.get()):
+                    if self._restore_mods(game_dir):
                         self.log_t("mods_restored_success", level="SUCCESS")
                     else:
                         raise RuntimeError(self.lang.t("restore_mods_failed"))
@@ -1555,6 +1640,7 @@ class BazaarGate:
 
             try:
                 self.log_t("step4_launch_game", level="INFO")
+                self._set_game_path_on_ui_thread(game_dir)
                 if self._launch_game_with_params(params):
                     self.log_t("step_separator", level="SUCCESS")
                     self.log_t("all_steps_complete", level="SUCCESS")
@@ -1563,7 +1649,7 @@ class BazaarGate:
                 self.log_t("step4_launch_game", str(e), level="ERROR")
                 raise
 
-            time.sleep(1)
+            time.sleep(AppConfig.PRE_EXIT_DELAY)
             self.log_t("program_will_exit", level="SYSTEM")
             self._request_exit()
 
@@ -1578,7 +1664,7 @@ class BazaarGate:
             self.log_t("trying_cleanup", level="WARNING")
             try:
                 if os.path.exists(self.backup_folder):
-                    self._restore_mods(self.game_path.get())
+                    self._restore_mods(game_dir)
             except (OSError, shutil.Error) as cleanup_error:
                 self.logger.warning(
                     f"Failed to restore mods during cleanup: {cleanup_error}"

@@ -27,8 +27,9 @@ class FakeProcess:
 class BazaarGateLogicTests(unittest.TestCase):
     def setUp(self) -> None:
         self.app = BazaarGate.__new__(BazaarGate)
+        self.app.root = mock.Mock()
         self.app.logger = logging.getLogger("TheBazaarGateTest")
-        self.app.log_t = lambda *args, **kwargs: None
+        self.app.log_t = mock.Mock()
         self.app.lang = mock.Mock()
         self.app.lang.t.return_value = "error"
         self.app.lang.t_format.side_effect = lambda key, *args, **kwargs: (
@@ -88,6 +89,22 @@ class BazaarGateLogicTests(unittest.TestCase):
             self.assertIsNotNone(launcher_exe)
             self.assertEqual(os.path.basename(launcher_exe), "Tempo Launcher.exe")
 
+    def test_find_launcher_exe_returns_none_on_permission_error(self) -> None:
+        with (
+            mock.patch("dist.launcher_tool.os.path.exists", return_value=True),
+            mock.patch(
+                "dist.launcher_tool.os.listdir", side_effect=PermissionError("denied")
+            ),
+        ):
+            self.assertIsNone(self.app._find_launcher_exe(r"C:\Tempo"))
+
+    def test_find_launcher_exe_returns_none_on_os_error(self) -> None:
+        with (
+            mock.patch("dist.launcher_tool.os.path.exists", return_value=True),
+            mock.patch("dist.launcher_tool.os.listdir", side_effect=OSError("busy")),
+        ):
+            self.assertIsNone(self.app._find_launcher_exe(r"C:\Tempo"))
+
     def test_launch_game_with_params_keeps_windows_arguments_intact(self) -> None:
         self.app.game_path = FakeStringVar(r"C:\Games\The Bazaar")
         self.app.log_t = lambda *args, **kwargs: None
@@ -141,6 +158,53 @@ class BazaarGateLogicTests(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(game_dir, "winhttp.dll")))
             self.assertFalse(os.path.exists(backup_dir))
 
+    def test_delete_mods_removes_files_and_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            game_dir = os.path.join(temp_dir, "game")
+            os.makedirs(os.path.join(game_dir, "BepInEx"))
+            with open(
+                os.path.join(game_dir, "BepInEx", "config.ini"), "w", encoding="utf-8"
+            ) as handle:
+                handle.write("cfg")
+            with open(
+                os.path.join(game_dir, "winhttp.dll"), "w", encoding="utf-8"
+            ) as handle:
+                handle.write("dll")
+
+            self.app.mod_items = ["BepInEx", "winhttp.dll"]
+
+            self.assertTrue(self.app._delete_mods(game_dir))
+            self.assertFalse(os.path.exists(os.path.join(game_dir, "BepInEx")))
+            self.assertFalse(os.path.exists(os.path.join(game_dir, "winhttp.dll")))
+
+    def test_backup_mods_logs_copy_error_detail(self) -> None:
+        self.app.backup_folder = r"C:\Temp\mod_backup"
+        self.app._copy_item = mock.Mock(return_value=(False, "permission denied"))
+
+        result = self.app._backup_mods(r"C:\Games\The Bazaar", ["winhttp.dll"])
+
+        self.assertFalse(result)
+        self.app._copy_item.assert_called_once()
+        self.app.log_t.assert_any_call(
+            "backup_failed", "winhttp.dll", "permission denied", level="ERROR"
+        )
+
+    def test_restore_mods_logs_copy_error_detail(self) -> None:
+        self.app.backup_folder = r"C:\Temp\mod_backup"
+        self.app._copy_item = mock.Mock(return_value=(False, "file is locked"))
+
+        with (
+            mock.patch("dist.launcher_tool.os.path.exists", return_value=True),
+            mock.patch("dist.launcher_tool.os.listdir", return_value=["winhttp.dll"]),
+        ):
+            result = self.app._restore_mods(r"C:\Games\The Bazaar")
+
+        self.assertFalse(result)
+        self.app._copy_item.assert_called_once()
+        self.app.log_t.assert_any_call(
+            "restore_failed", "winhttp.dll", "file is locked", level="ERROR"
+        )
+
     def test_load_settings_ignores_invalid_mod_entries(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.app.settings_file = os.path.join(temp_dir, "settings.txt")
@@ -183,6 +247,238 @@ class BazaarGateLogicTests(unittest.TestCase):
             with open(self.app.settings_file, "r", encoding="utf-8") as handle:
                 saved = json.load(handle)
             self.assertEqual(saved, settings)
+
+    def test_write_settings_data_replaces_invalid_existing_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.app.settings_file = os.path.join(temp_dir, "settings.txt")
+            with open(self.app.settings_file, "w", encoding="utf-8") as handle:
+                handle.write("{invalid json")
+
+            settings = {"language": "zh", "mod_items": ["winhttp.dll"]}
+
+            self.app._write_settings_data(settings)
+
+            with open(self.app.settings_file, "r", encoding="utf-8") as handle:
+                saved = json.load(handle)
+            self.assertEqual(saved, settings)
+
+    def test_run_launch_process_reuses_detected_mod_files(self) -> None:
+        self.app.game_path = FakeStringVar(r"C:\Games\The Bazaar")
+        self.app.launcher_path = FakeStringVar(r"C:\Tempo")
+        self.app.backup_folder = r"C:\Temp\mod_backup"
+        self.app._request_exit = mock.Mock()
+        self.app._set_button_state = mock.Mock()
+        self.app._show_error_dialog = mock.Mock()
+        self.app._show_big_reminder = mock.Mock()
+        self.app._safe_launch_exe = mock.Mock(return_value=mock.Mock(pid=123))
+        self.app._wait_for_manual_click_and_capture = mock.Mock(
+            return_value=["--token=abc"]
+        )
+        self.app._find_process_by_name = mock.Mock(
+            side_effect=[mock.Mock(pid=456), None]
+        )
+        self.app._close_process_gracefully = mock.Mock(return_value=True)
+        self.app._restore_mods = mock.Mock(return_value=True)
+        self.app._launch_game_with_params = mock.Mock(return_value=True)
+
+        mod_files = ["BepInEx", "winhttp.dll"]
+        self.app._get_mod_files = mock.Mock(return_value=mod_files)
+        self.app._backup_mods = mock.Mock(return_value=True)
+        self.app._delete_mods = mock.Mock(return_value=True)
+
+        with (
+            mock.patch("dist.launcher_tool.time.sleep", return_value=None),
+            mock.patch(
+                "dist.launcher_tool.os.path.exists",
+                side_effect=lambda path: path == self.app.backup_folder,
+            ),
+        ):
+            self.app._run_launch_process(
+                self.app.game_path.get(),
+                self.app.launcher_path.get(),
+                r"C:\Tempo\Tempo Launcher.exe",
+            )
+
+        self.app._get_mod_files.assert_called_once_with(self.app.game_path.get())
+        self.app._backup_mods.assert_called_once_with(
+            self.app.game_path.get(), mod_files
+        )
+        self.app._delete_mods.assert_called_once_with(
+            self.app.game_path.get(), mod_files
+        )
+
+    def test_copy_item_returns_error_detail_on_failure(self) -> None:
+        with mock.patch(
+            "dist.launcher_tool.shutil.copy2", side_effect=OSError("disk full")
+        ):
+            copied, error_detail = self.app._copy_item("src", "dst")
+
+        self.assertFalse(copied)
+        self.assertEqual(error_detail, "disk full")
+
+    def test_backup_mods_does_not_rescan_when_empty_mod_list_is_provided(self) -> None:
+        self.app._get_mod_files = mock.Mock(
+            side_effect=AssertionError("should not rescan")
+        )
+
+        self.assertFalse(self.app._backup_mods(r"C:\Games\The Bazaar", []))
+
+    def test_delete_mods_does_not_rescan_when_empty_mod_list_is_provided(self) -> None:
+        self.app._get_mod_files = mock.Mock(
+            side_effect=AssertionError("should not rescan")
+        )
+
+        self.assertTrue(self.app._delete_mods(r"C:\Games\The Bazaar", []))
+
+
+class BazaarGateLaunchFlowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = BazaarGate.__new__(BazaarGate)
+        self.app.root = mock.Mock()
+        self.app.logger = logging.getLogger("TheBazaarGateLaunchFlowTest")
+        self.app.log_t = lambda *args, **kwargs: None
+        self.app.lang = mock.Mock()
+        self.app.lang.t.side_effect = lambda key, default=None: default or key
+        self.app.lang.t_format.side_effect = lambda key, *args, **kwargs: (
+            f"{key}:{args}"
+        )
+        self.app.game_path = FakeStringVar()
+        self.app.launcher_path = FakeStringVar()
+        self.app.launch_button = mock.Mock()
+        self.app._worker_thread = None
+
+    def test_start_launch_process_does_not_start_worker_when_validation_fails(
+        self,
+    ) -> None:
+        self.app._validate_launch_prerequisites = mock.Mock(return_value=None)
+
+        with mock.patch("dist.launcher_tool.threading.Thread") as thread_cls:
+            self.app._start_launch_process()
+
+        self.app._validate_launch_prerequisites.assert_called_once_with()
+        thread_cls.assert_not_called()
+
+    def test_start_launch_process_starts_worker_with_validated_values(self) -> None:
+        validated = (
+            r"C:\Games\The Bazaar",
+            r"C:\Tempo",
+            r"C:\Tempo\Tempo Launcher.exe",
+        )
+        fake_thread = mock.Mock()
+        self.app._validate_launch_prerequisites = mock.Mock(return_value=validated)
+        self.app._set_button_state = mock.Mock()
+
+        with mock.patch(
+            "dist.launcher_tool.threading.Thread", return_value=fake_thread
+        ) as thread_cls:
+            self.app._start_launch_process()
+
+        self.app._set_button_state.assert_called_once_with("disabled")
+        thread_cls.assert_called_once()
+        self.assertEqual(
+            thread_cls.call_args.kwargs["target"], self.app._run_launch_process
+        )
+        self.assertEqual(thread_cls.call_args.kwargs["args"], validated)
+        self.assertTrue(thread_cls.call_args.kwargs["daemon"])
+        fake_thread.start.assert_called_once_with()
+        self.assertIs(self.app._worker_thread, fake_thread)
+
+    def test_set_game_path_on_ui_thread_uses_root_after(self) -> None:
+        callbacks = []
+
+        def capture_after(delay, callback):
+            callbacks.append((delay, callback))
+
+        self.app.root.after.side_effect = capture_after
+
+        self.app._set_game_path_on_ui_thread(r"C:\Games\The Bazaar")
+
+        self.assertEqual(len(callbacks), 1)
+        delay, callback = callbacks[0]
+        self.assertEqual(delay, 0)
+        self.assertEqual(self.app.game_path.get(), "")
+        callback()
+        self.assertEqual(self.app.game_path.get(), r"C:\Games\The Bazaar")
+
+    def test_run_launch_process_schedules_game_path_update_on_ui_thread(self) -> None:
+        self.app.game_path = FakeStringVar(r"C:\Original")
+        self.app.launcher_path = FakeStringVar(r"C:\Tempo")
+        self.app.backup_folder = r"C:\Temp\mod_backup"
+        self.app._request_exit = mock.Mock()
+        self.app._set_button_state = mock.Mock()
+        self.app._show_error_dialog = mock.Mock()
+        self.app._show_big_reminder = mock.Mock()
+        self.app._safe_launch_exe = mock.Mock(return_value=mock.Mock(pid=123))
+        self.app._wait_for_manual_click_and_capture = mock.Mock(
+            return_value=["--token=abc"]
+        )
+        self.app._find_process_by_name = mock.Mock(
+            side_effect=[mock.Mock(pid=456), None]
+        )
+        self.app._close_process_gracefully = mock.Mock(return_value=True)
+        self.app._restore_mods = mock.Mock(return_value=True)
+        self.app._launch_game_with_params = mock.Mock(return_value=True)
+        self.app._set_game_path_on_ui_thread = mock.Mock()
+        self.app._get_mod_files = mock.Mock(return_value=["winhttp.dll"])
+        self.app._backup_mods = mock.Mock(return_value=True)
+        self.app._delete_mods = mock.Mock(return_value=True)
+
+        with (
+            mock.patch("dist.launcher_tool.time.sleep", return_value=None),
+            mock.patch(
+                "dist.launcher_tool.os.path.exists",
+                side_effect=lambda path: path == self.app.backup_folder,
+            ),
+        ):
+            self.app._run_launch_process(
+                r"C:\Games\The Bazaar",
+                r"C:\Tempo",
+                r"C:\Tempo\Tempo Launcher.exe",
+            )
+
+        self.app._set_game_path_on_ui_thread.assert_called_once_with(
+            r"C:\Games\The Bazaar"
+        )
+        self.app._launch_game_with_params.assert_called_once_with(["--token=abc"])
+
+    def test_wait_for_manual_click_and_capture_uses_poll_intervals(self) -> None:
+        psutil_module = mock.Mock()
+        psutil_module.NoSuchProcess = RuntimeError
+        psutil_module.AccessDenied = PermissionError
+        self.app._find_process_by_name = mock.Mock(
+            side_effect=[
+                None,
+                mock.Mock(pid=321, cmdline=lambda: ["TheBazaar.exe", "--token=ok"]),
+            ]
+        )
+
+        sleep_calls = []
+
+        with (
+            mock.patch("dist.launcher_tool.win32gui", mock.Mock()),
+            mock.patch("dist.launcher_tool.IS_WINDOWS", True),
+            mock.patch("dist.launcher_tool.psutil", psutil_module),
+            mock.patch(
+                "dist.launcher_tool.time.sleep",
+                side_effect=lambda value: sleep_calls.append(value),
+            ),
+            mock.patch("dist.launcher_tool.AppConfig.LAUNCHER_WINDOW_TIMEOUT", 1),
+            mock.patch(
+                "dist.launcher_tool.AppConfig.LAUNCHER_WINDOW_POLL_INTERVAL", 1.0
+            ),
+            mock.patch("dist.launcher_tool.AppConfig.GAME_START_TIMEOUT", 5),
+            mock.patch("dist.launcher_tool.AppConfig.GAME_PROCESS_POLL_INTERVAL", 0.5),
+        ):
+            win32gui = __import__("dist.launcher_tool", fromlist=["win32gui"]).win32gui
+            win32gui.IsWindowVisible.return_value = False
+            win32gui.GetWindowText.return_value = ""
+            win32gui.EnumWindows.side_effect = lambda callback, _: None
+
+            params = self.app._wait_for_manual_click_and_capture()
+
+        self.assertEqual(params, ["--token=ok"])
+        self.assertIn(1.0, sleep_calls)
+        self.assertIn(0.5, sleep_calls)
 
 
 class LanguageManagerTests(unittest.TestCase):
