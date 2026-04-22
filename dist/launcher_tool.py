@@ -5,7 +5,7 @@ The Bazaar Gate - The Bazaar 启动辅助工具
 主要功能包括：模组备份/恢复、启动器参数捕获、游戏启动等。
 
 Author: The Bazaar Gate Team
-Version: 1.3.0
+Version: 1.4.0
 """
 
 import tkinter as tk
@@ -52,7 +52,7 @@ class AppConfig:
     POST_GAME_CLOSE_DELAY: float = 1.0
     PRE_EXIT_DELAY: float = 0.5
     WINDOW_WIDTH: int = 500
-    WINDOW_HEIGHT: int = 600
+    WINDOW_HEIGHT: int = 800
     WINDOW_MIN_WIDTH: int = 450
     WINDOW_MIN_HEIGHT: int = 500
     GAME_EXE_NAME: str = "TheBazaar.exe"
@@ -879,7 +879,7 @@ class BazaarGate:
         selected = self.language_combo.get()
         if self.lang.set_language(selected):
             self._save_settings()
-            self._apply_language()
+            self._refresh_language_ui()
 
     def log_t(
         self, key: str, *args: Any, level: str = "INFO", default: Optional[str] = None
@@ -982,13 +982,19 @@ class BazaarGate:
         """
         self._log_message(message, level)
 
-    def _apply_language(self) -> None:
+    def _refresh_language_ui(self) -> None:
         """
         应用语言设置到所有UI组件。
         """
         self.root.title(self.lang.t("app_title"))
         self._apply_language_to_main_page()
         self._apply_language_to_settings_page()
+
+    def _apply_language(self) -> None:
+        """
+        应用语言设置并执行启动阶段的附加处理。
+        """
+        self._refresh_language_ui()
         self.log_t("program_started", level="INFO")
         self._check_default_paths()
 
@@ -1276,7 +1282,7 @@ class BazaarGate:
         根据进程名查找进程。
 
         Args:
-            process_name: 进程名称（部分匹配）
+            process_name: 进程名称（忽略大小写的精确匹配）
 
         Returns:
             找到的进程对象，未找到返回None
@@ -1646,7 +1652,7 @@ class BazaarGate:
                     self.log_t("all_steps_complete", level="SUCCESS")
                     self.log_t("step_separator", level="SUCCESS")
             except (OSError, subprocess.SubprocessError, ValueError) as e:
-                self.log_t("step4_launch_game", str(e), level="ERROR")
+                self.log_t("launch_game_failed", str(e), level="ERROR")
                 raise
 
             time.sleep(AppConfig.PRE_EXIT_DELAY)

@@ -480,6 +480,68 @@ class BazaarGateLaunchFlowTests(unittest.TestCase):
         self.assertIn(1.0, sleep_calls)
         self.assertIn(0.5, sleep_calls)
 
+    def test_run_launch_process_logs_launch_failure_with_error_key(self) -> None:
+        self.app.game_path = FakeStringVar(r"C:\Games\The Bazaar")
+        self.app.launcher_path = FakeStringVar(r"C:\Tempo")
+        self.app.backup_folder = r"C:\Temp\mod_backup"
+        self.app.log_t = mock.Mock()
+        self.app._request_exit = mock.Mock()
+        self.app._set_button_state = mock.Mock()
+        self.app._show_error_dialog = mock.Mock()
+        self.app._show_big_reminder = mock.Mock()
+        self.app._safe_launch_exe = mock.Mock(return_value=mock.Mock(pid=123))
+        self.app._wait_for_manual_click_and_capture = mock.Mock(return_value=["--token=abc"])
+        self.app._find_process_by_name = mock.Mock(side_effect=[mock.Mock(pid=456), None])
+        self.app._close_process_gracefully = mock.Mock(return_value=True)
+        self.app._restore_mods = mock.Mock(return_value=True)
+        self.app._set_game_path_on_ui_thread = mock.Mock()
+        self.app._launch_game_with_params = mock.Mock(side_effect=OSError("boom"))
+        self.app._get_mod_files = mock.Mock(return_value=[])
+
+        with (
+            mock.patch("dist.launcher_tool.time.sleep", return_value=None),
+            mock.patch("dist.launcher_tool.os.path.exists", return_value=False),
+        ):
+            self.app._run_launch_process(
+                r"C:\Games\The Bazaar",
+                r"C:\Tempo",
+                r"C:\Tempo\Tempo Launcher.exe",
+            )
+
+        self.app.log_t.assert_any_call("launch_game_failed", "boom", level="ERROR")
+
+
+class BazaarGateLanguageFlowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = BazaarGate.__new__(BazaarGate)
+        self.app.root = mock.Mock()
+        self.app.lang = mock.Mock()
+        self.app.language_combo = mock.Mock()
+        self.app._save_settings = mock.Mock()
+        self.app._refresh_language_ui = mock.Mock()
+        self.app._apply_language_to_main_page = mock.Mock()
+        self.app._apply_language_to_settings_page = mock.Mock()
+        self.app.log_t = mock.Mock()
+        self.app._check_default_paths = mock.Mock()
+
+    def test_on_language_changed_refreshes_ui_without_startup_side_effects(self) -> None:
+        self.app.language_combo.get.return_value = "en"
+        self.app.lang.set_language.return_value = True
+
+        self.app._on_language_changed()
+
+        self.app._save_settings.assert_called_once_with()
+        self.app._refresh_language_ui.assert_called_once_with()
+        self.app.log_t.assert_not_called()
+        self.app._check_default_paths.assert_not_called()
+
+    def test_apply_language_runs_startup_side_effects_once(self) -> None:
+        self.app._apply_language()
+
+        self.app._refresh_language_ui.assert_called_once_with()
+        self.app.log_t.assert_called_once_with("program_started", level="INFO")
+        self.app._check_default_paths.assert_called_once_with()
+
 
 class LanguageManagerTests(unittest.TestCase):
     def test_translation_falls_back_to_available_language(self) -> None:

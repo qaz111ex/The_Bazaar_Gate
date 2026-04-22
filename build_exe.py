@@ -4,7 +4,7 @@ The Bazaar Gate 打包脚本
 使用 PyInstaller 将启动器打包为独立的可执行文件。
 
 Author: The Bazaar Gate Team
-Version: 1.3.0
+Version: 1.4.0
 """
 
 import PyInstaller.__main__
@@ -91,17 +91,8 @@ def build() -> int:
     except OSError as e:
         print(f"\nFilesystem error: {e}")
         return 1
-    except RuntimeError as e:
+    except (RuntimeError, ImportError, ValueError, TypeError) as e:
         print(f"\nBuild failed: {e}")
-        return 1
-    except ImportError as e:
-        print(f"\nDependency import failed: {e}")
-        return 1
-    except ValueError as e:
-        print(f"\nInvalid build argument: {e}")
-        return 1
-    except TypeError as e:
-        print(f"\nInvalid build argument type: {e}")
         return 1
     except AttributeError as e:
         print(f"\nBuild tool error: {e}")
